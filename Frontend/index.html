@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DodgeChat Graph</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="nav-shell">
+        <button id="navToggleButton" class="nav-icon-button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navMenu">
+          <span></span>
+          <span></span>
+        </button>
+        <div id="navMenu" class="nav-menu hidden">
+          <button class="nav-menu-item" data-nav-action="home">Home</button>
+          <div class="nav-menu-group">
+            <button class="nav-menu-item nav-menu-expand" data-nav-action="toggle-mapping" aria-expanded="true">
+              <span>Mapping</span>
+              <span class="nav-menu-caret">+</span>
+            </button>
+            <div id="mappingSubmenu" class="nav-submenu">
+              <button class="nav-submenu-item active" data-nav-action="mapping-order-to-cash">Order to Cash</button>
+            </div>
+          </div>
+          <button class="nav-menu-item" data-nav-action="history">History</button>
+          <button class="nav-menu-item" data-nav-action="settings">Settings</button>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-breadcrumb">
+          <span class="nav-muted">Mapping</span>
+          <span class="nav-separator">/</span>
+          <span class="nav-current">Order to Cash</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="graph-section">
+        <div class="graph-toolbar">
+          <button id="fitButton" class="ghost-button">Fit Graph</button>
+          <button id="resetButton" class="ghost-button">Clear Highlights</button>
+          <div class="zoom-controls" aria-label="Graph zoom controls">
+            <button id="zoomInButton" class="ghost-button zoom-button" aria-label="Zoom in">+</button>
+            <button id="zoomOutButton" class="ghost-button zoom-button" aria-label="Zoom out">-</button>
+          </div>
+        </div>
+        <div id="graphCanvas" class="graph-canvas"></div>
+        <div id="hoverTooltip" class="hover-tooltip hidden"></div>
+        <aside id="nodeCard" class="node-card hidden">
+          <div class="node-card-header">
+            <div>
+              <div id="nodeEntity" class="node-entity"></div>
+              <h2 id="nodeLabel"></h2>
+            </div>
+            <button id="closeNodeCard" class="close-button" aria-label="Close details">x</button>
+          </div>
+          <div id="nodeMeta" class="node-meta"></div>
+          <div id="nodeDetails" class="node-details"></div>
+          <button id="askAboutNode" class="primary-button wide-button">Ask about this node</button>
+        </aside>
+      </section>
+
+      <aside class="chat-section">
+        <div class="chat-header">
+          <div class="chat-title">Chat with Graph</div>
+          <div class="chat-subtitle">Order to Cash</div>
+        </div>
+
+        <aside id="historyPanel" class="history-panel hidden">
+          <div class="history-panel-header">
+            <div>
+              <div class="history-panel-title">History</div>
+              <div class="history-panel-subtitle">Saved chat sessions</div>
+            </div>
+            <button id="closeHistoryButton" class="close-button history-close-button" aria-label="Close history">x</button>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </aside>
+
+        <div id="messages" class="messages"></div>
+
+        <div class="composer">
+          <div id="statusBar" class="status-bar">Loading graph data...</div>
+          <div class="composer-card">
+            <div class="composer-input-wrap">
+              <textarea id="promptInput" rows="4" placeholder="Analyze anything"></textarea>
+              <button id="sendButton" class="send-button" aria-label="Send">Send</button>
+            </div>
+            <div class="composer-footer">
+            <div id="focusBadge" class="focus-badge hidden"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/cytoscape@3.29.2/dist/cytoscape.min.js"></script>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
