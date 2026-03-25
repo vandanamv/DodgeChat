@@ -120,10 +120,10 @@ flowchart TD
     G --> H[Build Graph and Indexes]
     classDef ingest fill:#dbeafe,stroke:#2563eb,color:#0f172a,stroke-width:2px;
     classDef store fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
-    classDef graph fill:#fde68a,stroke:#d97706,color:#78350f,stroke-width:2px;
+    classDef graphNodes fill:#fde68a,stroke:#d97706,color:#78350f,stroke-width:2px;
     class A,B,C,D ingest;
     class E,F store;
-    class G,H graph;
+    class G,H graphNodes;
 ```
 
 ## Request Lifecycle
