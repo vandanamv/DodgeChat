@@ -1,4 +1,5 @@
 import json
+import os
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -76,26 +77,28 @@ def mime_type_for(path: Path) -> str:
 class GraphChatHandler(BaseHTTPRequestHandler):
     state: AppState = None  # type: ignore[assignment]
 
-    def _send_json(self, status: int, payload: Dict[str, Any]) -> None:
+    def _send_json(self, status: int, payload: Dict[str, Any], include_body: bool = True) -> None:
         body = json.dumps(payload, ensure_ascii=True).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if include_body:
+            self.wfile.write(body)
 
-    def _serve_static(self, relative_path: str) -> None:
+    def _serve_static(self, relative_path: str, include_body: bool = True) -> None:
         path = resolve_static_path(relative_path)
         if not path:
-            self._send_json(404, {"error": "Not found"})
+            self._send_json(404, {"error": "Not found"}, include_body=include_body)
             return
         data = path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", mime_type_for(path))
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        if include_body:
+            self.wfile.write(data)
 
     def _chat_response(
         self,
@@ -117,23 +120,29 @@ class GraphChatHandler(BaseHTTPRequestHandler):
             "resolvedFocusNodeId": resolved_focus_node_id,
         }
 
-    def do_GET(self) -> None:
+    def _handle_get_like(self, include_body: bool = True) -> None:
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in {"/", "/index.html"}:
-            self._serve_static("index.html")
+            self._serve_static("index.html", include_body=include_body)
             return
         if parsed.path == "/api/health":
-            self._send_json(200, {"ok": True})
+            self._send_json(200, {"ok": True}, include_body=include_body)
             return
         if parsed.path == "/api/graph":
-            self._send_json(200, self.state.ui_graph_payload)
+            self._send_json(200, self.state.ui_graph_payload, include_body=include_body)
             return
         if parsed.path.startswith("/"):
             relative_path = parsed.path.lstrip("/")
             if resolve_static_path(relative_path):
-                self._serve_static(relative_path)
+                self._serve_static(relative_path, include_body=include_body)
                 return
-        self._send_json(404, {"error": "Not found"})
+        self._send_json(404, {"error": "Not found"}, include_body=include_body)
+
+    def do_GET(self) -> None:
+        self._handle_get_like(include_body=True)
+
+    def do_HEAD(self) -> None:
+        self._handle_get_like(include_body=False)
 
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
@@ -276,8 +285,8 @@ def run_server() -> None:
     load_dotenv()
     state = init_state()
     GraphChatHandler.state = state
-    host = DEFAULT_HOST
-    port = DEFAULT_PORT
+    host = os.getenv("HOST", DEFAULT_HOST)
+    port = int(os.getenv("PORT", str(DEFAULT_PORT)))
     server = ThreadingHTTPServer((host, port), GraphChatHandler)
     print(f"DodgeChat graph app running at http://{host}:{port}")
     print("Press Ctrl+C to stop.")

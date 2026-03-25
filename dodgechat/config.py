@@ -2,7 +2,7 @@ from typing import Any, Dict, Sequence, Tuple
 
 # Shared application configuration extracted from graph_chat_app.py
 
-DEFAULT_HOST = "127.0.0.1"
+DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_MODEL = "openai/gpt-4.1-mini"
 DEFAULT_MAX_TOKENS = 400
