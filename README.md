@@ -5,6 +5,10 @@ This repo now includes two ways to work with the SAP order-to-cash dataset in `s
 - `ask_dataset.py` for quick CLI Q&A
 - `graph_chat_app.py` for a browser graph + chat experience
 
+## Live Demo
+
+- Render deployment: [https://dodgechat.onrender.com/](https://dodgechat.onrender.com/)
+
 ## Architecture Overview
 
 DodgeChat is intentionally built as a small Python-first application with a thin browser UI. The backend owns dataset loading, graph construction, SQL generation, SQL execution, and answer synthesis. The frontend focuses on graph interaction and chat presentation.
@@ -60,9 +64,18 @@ OPENROUTER_MAX_TOKENS=1200
 
 No third-party Python runtime packages are required for the current version.
 
-## Graph App
+## Local Setup
 
-Run the server:
+Clone the repo and move into the project:
+
+```bash
+git clone https://github.com/vandanamv/DodgeChat.git
+cd DodgeChat
+```
+
+Create a `.env` file with your OpenRouter credentials, then run the app.
+
+Run the server directly:
 
 ```powershell
 python graph_chat_app.py
@@ -75,6 +88,14 @@ bash run.sh
 ```
 
 Then open `http://127.0.0.1:8000`.
+
+Local setup notes:
+
+- The app reads the host and port from environment variables when available
+- For local development you can keep using `http://127.0.0.1:8000`
+- For deployment platforms like Render, the app binds to `0.0.0.0` and uses the platform-provided `PORT`
+
+## Graph App
 
 What the graph app does:
 
@@ -89,6 +110,29 @@ Notes:
 - the browser graph uses Cytoscape from a CDN
 - SQL execution is restricted to one read-only `SELECT` or `WITH` query
 - joins can use `norm_id(...)` for item numbers like `10` and `000010`
+
+## Deployment
+
+The app is deployed on Render:
+
+- Production URL: [https://dodgechat.onrender.com/](https://dodgechat.onrender.com/)
+- Build command: `pip install -r requirements.txt`
+- Start command: `python graph_chat_app.py`
+
+Required Render environment variables:
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`
+- `OPENAI_MODEL=openai/gpt-4.1-mini`
+- `OPENROUTER_MAX_TOKENS=1200`
+
+To make every push update the deployment automatically:
+
+- connect the GitHub repo to Render
+- deploy the `main` branch
+- keep Render auto-deploy enabled for the service
+
+With that setup, each new commit pushed to `main` triggers a fresh Render deploy automatically.
 
 ## Main Components
 
