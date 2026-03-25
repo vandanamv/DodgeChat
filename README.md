@@ -18,7 +18,7 @@ flowchart LR
     D --> F[UI Graph Payload]
     F --> G[HTTP Server]
     G --> H[Browser UI]
-    H --> I[/api/chat]
+    H --> I[API Chat Endpoint]
     I --> J[Question Router]
     J --> K[Deterministic Answer Path]
     J --> L[LLM SQL Path]
@@ -120,7 +120,7 @@ sequenceDiagram
     participant LLM as OpenRouter
 
     U->>FE: Ask a dataset question
-    FE->>API: POST /api/chat
+    FE->>API: POST api chat
     API->>QR: Resolve focus node and route question
     QR->>QR: Check dataset-domain guardrail
     alt Deterministic question type
