@@ -10,6 +10,7 @@ This repo now includes two ways to work with the SAP order-to-cash dataset in `s
 DodgeChat is intentionally built as a small Python-first application with a thin browser UI. The backend owns dataset loading, graph construction, SQL generation, SQL execution, and answer synthesis. The frontend focuses on graph interaction and chat presentation.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f1ff', 'primaryTextColor': '#0f172a', 'primaryBorderColor': '#2563eb', 'lineColor': '#475569', 'secondaryColor': '#ecfeff', 'tertiaryColor': '#fef3c7' }}}%%
 flowchart LR
     A[JSONL SAP O2C Dataset] --> B[SQLite Cache Builder]
     B --> C[AppState Initialization]
@@ -25,6 +26,16 @@ flowchart LR
     L --> M[SQLite Read Only Query]
     K --> N[JSON Response]
     M --> N[JSON Response]
+    classDef data fill:#dbeafe,stroke:#2563eb,color:#0f172a,stroke-width:2px;
+    classDef app fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef ui fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px;
+    classDef logic fill:#f3e8ff,stroke:#9333ea,color:#581c87,stroke-width:2px;
+    classDef output fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px;
+    class A,B data;
+    class C,D,E,F,G app;
+    class H,I ui;
+    class J,K,L,M logic;
+    class N output;
 ```
 
 ## Why This Architecture
@@ -37,6 +48,8 @@ flowchart LR
 ## Configuration
 
 Store your OpenRouter settings in `.env`:
+
+Create an OpenRouter API key here: [OpenRouter API Keys](https://openrouter.ai/workspaces/default/keys)
 
 ```powershell
 OPENROUTER_API_KEY=your_key_here
@@ -96,6 +109,7 @@ SQLite is the right fit for this project because the data is local, read-heavy, 
 - Portable cache: the database lives in `.cache/o2c_cache.sqlite3`, which keeps the runtime self-contained
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#eef2ff', 'primaryTextColor': '#111827', 'primaryBorderColor': '#4f46e5', 'lineColor': '#64748b', 'secondaryColor': '#ecfccb', 'tertiaryColor': '#fae8ff' }}}%%
 flowchart TD
     A[JSONL Files] --> B[Infer Table Columns]
     B --> C[Create SQLite Tables]
@@ -104,6 +118,12 @@ flowchart TD
     E --> F[Load Schema]
     F --> G[Infer Links]
     G --> H[Build Graph and Indexes]
+    classDef ingest fill:#dbeafe,stroke:#2563eb,color:#0f172a,stroke-width:2px;
+    classDef store fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef graph fill:#fde68a,stroke:#d97706,color:#78350f,stroke-width:2px;
+    class A,B,C,D ingest;
+    class E,F store;
+    class G,H graph;
 ```
 
 ## Request Lifecycle
@@ -111,6 +131,7 @@ flowchart TD
 The chat pipeline is designed to avoid unnecessary LLM calls and to preserve business context from the selected graph node.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'actorBkg': '#dbeafe', 'actorBorder': '#2563eb', 'actorTextColor': '#0f172a', 'signalColor': '#475569', 'signalTextColor': '#111827', 'labelBoxBkgColor': '#fef3c7', 'labelBoxBorderColor': '#d97706', 'labelTextColor': '#78350f', 'loopTextColor': '#111827', 'noteBkgColor': '#f3e8ff', 'noteBorderColor': '#9333ea', 'noteTextColor': '#581c87', 'activationBorderColor': '#2563eb', 'activationBkgColor': '#e0f2fe' }}}%%
 sequenceDiagram
     participant U as User
     participant FE as Frontend
@@ -168,6 +189,7 @@ The safety model combines prompt restrictions with application-level enforcement
 - Fallback reasoning: when row-based results are weak, the app can answer from graph relationships already inferred from the dataset
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff7ed', 'primaryTextColor': '#111827', 'primaryBorderColor': '#ea580c', 'lineColor': '#64748b', 'secondaryColor': '#ecfeff', 'tertiaryColor': '#fce7f3' }}}%%
 flowchart TD
     A[Incoming Question] --> B{Dataset Domain?}
     B -- No --> C[Reject as unrelated]
@@ -179,6 +201,15 @@ flowchart TD
     H -- No --> I[Reject SQL]
     H -- Yes --> J[Execute in SQLite]
     J --> K[Answer from returned rows]
+    classDef entry fill:#dbeafe,stroke:#2563eb,color:#0f172a,stroke-width:2px;
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px;
+    classDef safe fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef reject fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px;
+    classDef process fill:#f3e8ff,stroke:#9333ea,color:#581c87,stroke-width:2px;
+    class A entry;
+    class B,D,H decision;
+    class E,F,G,J,K process;
+    class C,I reject;
 ```
 
 ## Data and Graph Model
