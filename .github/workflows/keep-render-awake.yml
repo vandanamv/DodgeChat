@@ -1,0 +1,16 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: "*/2 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render health endpoint
+        run: curl -fsS https://dodgechat.onrender.com/api/health
