@@ -9,6 +9,12 @@ This repo now includes two ways to work with the SAP order-to-cash dataset in `s
 
 - Render deployment: [https://dodgechat.onrender.com/](https://dodgechat.onrender.com/)
 
+Note:
+
+- On first open, the deployed app may take some time to load the graph data
+- If Render shows its default loading screen, no worries, the application is starting up
+- The app should usually become available within about 2 minutes at most
+
 ## Architecture Overview
 
 DodgeChat is intentionally built as a small Python-first application with a thin browser UI. The backend owns dataset loading, graph construction, SQL generation, SQL execution, and answer synthesis. The frontend focuses on graph interaction and chat presentation.
