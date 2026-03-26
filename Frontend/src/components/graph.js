@@ -75,78 +75,38 @@ function renderNodeCard(node) {
   });
 }
 
-function collectProcessEntities(startEntity, maxDepth = 2) {
-  const allowed = new Set([startEntity]);
-  const queue = [{ entity: startEntity, depth: 0 }];
-
-  while (queue.length > 0) {
-    const { entity, depth } = queue.shift();
-    if (depth >= maxDepth) {
-      continue;
-    }
-    const flow = PROCESS_FLOW[entity];
-    if (!flow) {
-      continue;
-    }
-    [...(flow.previous || []), ...(flow.next || [])].forEach((neighbor) => {
-      if (allowed.has(neighbor)) {
-        return;
-      }
-      allowed.add(neighbor);
-      queue.push({ entity: neighbor, depth: depth + 1 });
-    });
-  }
-
-  return allowed;
-}
-
 function flowNeighborsForNode(node) {
   const data = node.data();
-  if (!PROCESS_FLOW[data.entity]) {
+  const flow = PROCESS_FLOW[data.entity];
+  if (!flow) {
     return node.closedNeighborhood();
   }
 
-  const allowedEntities = collectProcessEntities(data.entity, 2);
-  const collection = state.cy.collection().merge(node);
-  const queue = [{ current: node, depth: 0 }];
-  const seenNodes = new Set([node.id()]);
-  const seenEdges = new Set();
-  let matchedCount = 0;
-  const maxDepth = 3;
-  const maxNodes = 72;
-  const maxEdges = 120;
+  const preferredEntities = new Set(flow.next || []);
+  const fallbackEntities = new Set(flow.previous || []);
+  const directEdges = node.connectedEdges().filter((edge) => {
+    const other = edge.source().id() === node.id() ? edge.target() : edge.source();
+    return preferredEntities.has(other.data("entity"));
+  });
 
-  while (queue.length > 0) {
-    const { current, depth } = queue.shift();
-    current.connectedEdges().forEach((edge) => {
-      if (seenEdges.size >= maxEdges || seenNodes.size >= maxNodes) {
-        return;
-      }
-      const source = edge.source();
-      const target = edge.target();
-      const other = source.id() === current.id() ? target : source;
-      if (!allowedEntities.has(other.data("entity"))) {
-        return;
-      }
-      if (!seenEdges.has(edge.id())) {
-        seenEdges.add(edge.id());
-        collection.merge(edge);
-      }
-      if (!seenNodes.has(other.id())) {
-        seenNodes.add(other.id());
-        collection.merge(other);
-        matchedCount += 1;
-        if (depth + 1 < maxDepth && seenNodes.size < maxNodes) {
-          queue.push({ current: other, depth: depth + 1 });
-        }
-      }
-    });
-    if (seenEdges.size >= maxEdges || seenNodes.size >= maxNodes) {
-      break;
-    }
+  const edgesToUse = directEdges.length > 0
+    ? directEdges
+    : node.connectedEdges().filter((edge) => {
+        const other = edge.source().id() === node.id() ? edge.target() : edge.source();
+        return fallbackEntities.has(other.data("entity"));
+      });
+
+  if (!edgesToUse.length) {
+    return node.closedNeighborhood();
   }
 
-  return matchedCount > 0 ? collection : node.closedNeighborhood();
+  const collection = state.cy.collection().merge(node);
+  edgesToUse.forEach((edge) => {
+    collection.merge(edge);
+    collection.merge(edge.source());
+    collection.merge(edge.target());
+  });
+  return collection;
 }
 
 function applyProcessFlowHighlight(node) {
