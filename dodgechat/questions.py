@@ -49,6 +49,18 @@ LIST_INTENT_PATTERNS = (
     r"\bwhat are\b.*\b(all|the)\b",
 )
 
+FOLLOW_UP_PATTERNS = (
+    r"\bok\b",
+    r"\bonly\b",
+    r"\btop\s+\d+\b",
+    r"\bfirst\s+\d+\b",
+    r"\blimit\s+\d+\b",
+    r"\bjust\s+\d+\b",
+    r"\bshow\s+(me\s+)?(only\s+)?\d+\b",
+    r"\bmake it\b",
+    r"\bcan you\b",
+)
+
 
 def is_non_dataset_intent(question: str) -> bool:
     lowered = question.lower().strip()
@@ -62,6 +74,15 @@ def is_list_intent(question: str) -> bool:
     if not lowered:
         return False
     return any(re.search(pattern, lowered) for pattern in LIST_INTENT_PATTERNS)
+
+
+def is_follow_up_question(question: str) -> bool:
+    lowered = question.lower().strip()
+    if not lowered:
+        return False
+    if len(lowered.split()) <= 6:
+        return True
+    return any(re.search(pattern, lowered) for pattern in FOLLOW_UP_PATTERNS)
 
 
 def _row_line_text(row: Dict[str, Any], columns: Sequence[str]) -> str:
@@ -319,7 +340,12 @@ def is_customer_billing_question(question: str) -> bool:
 
 
 
-def is_dataset_domain_question(state: AppState, question: str, focus_node: Optional[Dict[str, Any]]) -> bool:
+def is_dataset_domain_question(
+    state: AppState,
+    question: str,
+    focus_node: Optional[Dict[str, Any]],
+    history: Optional[Sequence[Dict[str, str]]] = None,
+) -> bool:
     lowered = question.lower().strip()
     if not lowered:
         return False
@@ -339,6 +365,17 @@ def is_dataset_domain_question(state: AppState, question: str, focus_node: Optio
 
     if focus_node and any(phrase in lowered for phrase in FOCUS_REFERENCE_PHRASES):
         return True
+
+    if history and is_follow_up_question(question):
+        recent_user_messages = [
+            str(item.get("content", "")).strip()
+            for item in history[-6:]
+            if str(item.get("role", "")).strip().lower() == "user" and str(item.get("content", "")).strip()
+        ]
+        prior_messages = recent_user_messages[:-1] if recent_user_messages else []
+        for prior_question in reversed(prior_messages):
+            if is_dataset_domain_question(state, prior_question, focus_node=None, history=None):
+                return True
     return False
 
 

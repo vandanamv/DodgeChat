@@ -98,8 +98,26 @@ Then open `http://127.0.0.1:8000`.
 Local setup notes:
 
 - The app reads the host and port from environment variables when available
-- For local development you can keep using `http://127.0.0.1:8000`
-- For deployment platforms like Render, the app binds to `0.0.0.0` and uses the platform-provided `PORT`
+- By default, the app binds to `0.0.0.0:8000`
+- That same bind still works locally through `http://127.0.0.1:8000`
+- This is also the correct bind mode for cloud platforms like Render
+- You can still override host and port explicitly with `HOST` and `PORT`
+
+Examples:
+
+```powershell
+# default local + cloud-friendly bind
+python graph_chat_app.py
+
+# explicit local host
+$env:HOST="127.0.0.1"
+python graph_chat_app.py
+
+# explicit cloud-style host
+$env:HOST="0.0.0.0"
+$env:PORT="8000"
+python graph_chat_app.py
+```
 
 ## Graph App
 

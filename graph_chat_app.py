@@ -164,7 +164,7 @@ class GraphChatHandler(BaseHTTPRequestHandler):
             resolved_focus_node_id = resolve_focus_node(self.state, question, focus_node_id)
             focus_node = build_focus_context(self.state, resolved_focus_node_id)
 
-            if not is_dataset_domain_question(self.state, question, focus_node):
+            if not is_dataset_domain_question(self.state, question, focus_node, history):
                 self._send_json(
                     200,
                     self._chat_response(
@@ -289,6 +289,8 @@ def run_server() -> None:
     port = int(os.getenv("PORT", str(DEFAULT_PORT)))
     server = ThreadingHTTPServer((host, port), GraphChatHandler)
     print(f"DodgeChat graph app running at http://{host}:{port}")
+    if host == "0.0.0.0":
+        print(f"Open locally at http://127.0.0.1:{port}")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()

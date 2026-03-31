@@ -1,120 +1,112 @@
 import { elements, state } from "../core/state.js";
-import { INITIAL_ASSISTANT_MESSAGE, STORAGE_KEY } from "../lib/constants.js";
 import { setStatus } from "../lib/utils.js";
 import { applyRelatedHighlights, focusGraphOnNodeIds, hideNodeCard } from "./graph.js";
+import { ANALYZING_STATUS, EDITING_STATUS, IDLE_STATUS } from "./chat_features/composer_constants.js";
+import {
+  createHistoryEmptyElement,
+  createHistoryItemElement,
+} from "./chat_features/history_panel.js";
+import { createMessageElement } from "./chat_features/message_list.js";
+import {
+  buildSessionTitle,
+  firstUserPrompt,
+  loadSessionsFromStorage,
+  persistSessionsToStorage,
+  withInitialAssistantMessage,
+} from "./chat_features/conversation_store.js";
 
-export function addMessage(role, text) {
-  const wrapper = document.createElement("div");
-  wrapper.className = `message ${role}`;
-  const head = document.createElement("div");
-  head.className = "message-head";
-  const meta = document.createElement("div");
-  meta.className = "message-meta";
-  const name = document.createElement("div");
-  name.className = "message-name";
-  name.textContent = role === "assistant" ? "Dodge AI" : "You";
-  meta.appendChild(name);
+function setHistoryMode(isOpen) {
+  elements.chatSection.classList.toggle("history-mode", isOpen);
+}
 
-  if (role === "assistant") {
-    const roleLabel = document.createElement("div");
-    roleLabel.className = "message-role";
-    roleLabel.textContent = "Graph Agent";
-    meta.appendChild(roleLabel);
-  }
-
-  const avatar = document.createElement("div");
-  avatar.className = `message-avatar ${role}`;
-  avatar.textContent = role === "assistant" ? "D" : "U";
-
-  if (role === "assistant") {
-    head.appendChild(avatar);
-    head.appendChild(meta);
-  } else {
-    head.appendChild(meta);
-    head.appendChild(avatar);
-  }
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = text;
-  wrapper.appendChild(head);
-  wrapper.appendChild(bubble);
-
-  elements.messages.appendChild(wrapper);
+function scrollMessagesToBottom() {
   elements.messages.scrollTop = elements.messages.scrollHeight;
+}
+
+function clearPromptInput() {
+  elements.promptInput.value = "";
+}
+
+function focusPromptInputAtEnd(value) {
+  elements.promptInput.value = value;
+  elements.promptInput.focus();
+  elements.promptInput.setSelectionRange(value.length, value.length);
+}
+
+function updateComposerUi() {
+  const isEditing = Number.isInteger(state.editingMessageIndex);
+  elements.composerMode.classList.toggle("hidden", !isEditing);
+  elements.promptInput.classList.toggle("is-editing", isEditing);
+  elements.composerMode.textContent = isEditing ? EDITING_STATUS : "";
+  elements.cancelEditButton.classList.toggle("hidden", !isEditing);
+  elements.updateEditButton.classList.toggle("hidden", !isEditing);
+  elements.sendButton.classList.toggle("hidden", isEditing);
+  elements.sendButton.disabled = state.isSending;
+  elements.cancelEditButton.disabled = state.isSending;
+  elements.updateEditButton.disabled = state.isSending;
+}
+
+function startEditingMessage(index) {
+  const item = state.history[index];
+  if (!item || item.role !== "user") {
+    return;
+  }
+  state.editingMessageIndex = index;
+  focusPromptInputAtEnd(item.content);
+  updateComposerUi();
+  setStatus("Edit the prompt and apply your update.");
+}
+
+function resetToEmptyConversation(statusMessage = IDLE_STATUS) {
+  state.activeSessionId = null;
+  state.history = withInitialAssistantMessage([]);
+  state.editingMessageIndex = null;
+  renderMessages();
+  updateComposerUi();
+  hideNodeCard();
+  setStatus(statusMessage);
+}
+
+export function cancelEditingMessage() {
+  state.editingMessageIndex = null;
+  clearPromptInput();
+  updateComposerUi();
+  setStatus(IDLE_STATUS);
+}
+
+export function addMessage(role, text, index) {
+  elements.messages.appendChild(createMessageElement(role, text, index, startEditingMessage));
 }
 
 export function renderMessages() {
   elements.messages.innerHTML = "";
-  state.history.forEach((item) => addMessage(item.role, item.content));
-}
-
-export function withInitialAssistantMessage(history) {
-  const normalized = Array.isArray(history) ? history.slice() : [];
-  if (
-    normalized.length === 0 ||
-    normalized[0]?.role !== "assistant" ||
-    normalized[0]?.content !== INITIAL_ASSISTANT_MESSAGE
-  ) {
-    normalized.unshift({ role: "assistant", content: INITIAL_ASSISTANT_MESSAGE });
-  }
-  return normalized;
+  state.history.forEach((item, index) => addMessage(item.role, item.content, index));
+  scrollMessagesToBottom();
 }
 
 export function loadSessions() {
-  try {
-    const raw = globalThis.localStorage.getItem(STORAGE_KEY);
-    state.sessions = raw ? JSON.parse(raw) : [];
-  } catch {
-    state.sessions = [];
-  }
+  state.sessions = loadSessionsFromStorage();
 }
 
-function persistSessions() {
-  globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions.slice(0, 20)));
-}
-
-function sessionTitleFromHistory(history) {
-  const firstUser = history.find((item) => item.role === "user");
-  if (!firstUser) {
-    return "New chat";
+function deleteSession(sessionId) {
+  state.sessions = state.sessions.filter((item) => item.id !== sessionId);
+  if (state.activeSessionId === sessionId) {
+    resetToEmptyConversation("Chat deleted. Dodge AI is awaiting instructions.");
   }
-  return firstUser.content.length > 42 ? `${firstUser.content.slice(0, 42)}...` : firstUser.content;
+  persistSessionsToStorage(state.sessions);
+  renderHistoryPanel();
 }
 
 export function renderHistoryPanel() {
   elements.historyList.innerHTML = "";
   if (state.sessions.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "history-empty";
-    empty.textContent = "No saved chats yet.";
-    elements.historyList.appendChild(empty);
+    elements.historyList.appendChild(createHistoryEmptyElement());
     return;
   }
   state.sessions.forEach((session) => {
-    const button = document.createElement("button");
-    button.className = "history-item";
-    button.type = "button";
-    button.dataset.sessionId = session.id;
-
-    const title = document.createElement("div");
-    title.className = "history-item-title";
-    title.textContent = session.title || "New chat";
-
-    const meta = document.createElement("div");
-    meta.className = "history-item-meta";
-    meta.textContent = `${new Date(session.updatedAt).toLocaleString()} - ${session.history.length} messages`;
-
-    const preview = document.createElement("div");
-    preview.className = "history-item-preview";
-    const lastAssistant = [...session.history].reverse().find((item) => item.role === "assistant");
-    preview.textContent = lastAssistant ? lastAssistant.content : "No assistant reply yet.";
-
-    button.appendChild(title);
-    button.appendChild(meta);
-    button.appendChild(preview);
-    button.addEventListener("click", () => openSession(session.id));
-    elements.historyList.appendChild(button);
+    elements.historyList.appendChild(
+      createHistoryItemElement(session, firstUserPrompt(session.history), openSession, deleteSession)
+    );
   });
 }
 
@@ -124,21 +116,23 @@ function syncActiveSession() {
   }
   const session = {
     id: state.activeSessionId,
-    title: sessionTitleFromHistory(state.history),
+    title: buildSessionTitle(state.history),
     updatedAt: new Date().toISOString(),
     history: withInitialAssistantMessage(state.history),
   };
   state.sessions = [session, ...state.sessions.filter((item) => item.id !== session.id)].slice(0, 20);
-  persistSessions();
+  persistSessionsToStorage(state.sessions);
   renderHistoryPanel();
 }
 
 export function openHistoryPanel() {
   renderHistoryPanel();
+  setHistoryMode(true);
   elements.historyPanel.classList.remove("hidden");
 }
 
 export function closeHistoryPanel() {
+  setHistoryMode(false);
   elements.historyPanel.classList.add("hidden");
 }
 
@@ -149,29 +143,40 @@ function openSession(sessionId) {
   }
   state.activeSessionId = session.id;
   state.history = withInitialAssistantMessage(session.history);
+  state.editingMessageIndex = null;
   renderMessages();
+  updateComposerUi();
   closeHistoryPanel();
 }
 
 export function startNewSession() {
   state.activeSessionId = `session-${Date.now()}`;
-  state.history = withInitialAssistantMessage([]);
   state.selectedNodeId = null;
+  state.history = withInitialAssistantMessage([]);
+  state.editingMessageIndex = null;
   renderMessages();
+  updateComposerUi();
   hideNodeCard();
-  setStatus("Dodge AI is awaiting instructions.");
+  setStatus(IDLE_STATUS);
 }
 
 export async function sendQuestion() {
   const question = elements.promptInput.value.trim();
-  if (!question) {
+  if (!question || state.isSending) {
     return;
   }
-  elements.promptInput.value = "";
-  addMessage("user", question);
+  const editingIndex = state.editingMessageIndex;
+  state.editingMessageIndex = null;
+  state.isSending = true;
+  updateComposerUi();
+  clearPromptInput();
+  if (Number.isInteger(editingIndex)) {
+    state.history = state.history.slice(0, editingIndex);
+  }
   state.history.push({ role: "user", content: question });
+  renderMessages();
   syncActiveSession();
-  setStatus("Analyzing your question...");
+  setStatus(ANALYZING_STATUS);
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -182,14 +187,23 @@ export async function sendQuestion() {
     if (!response.ok) {
       throw new Error(payload.error || "Request failed.");
     }
-    addMessage("assistant", payload.answer);
     state.history.push({ role: "assistant", content: payload.answer });
+    renderMessages();
     syncActiveSession();
     applyRelatedHighlights(payload.relatedNodeIds || []);
     focusGraphOnNodeIds(payload.relatedNodeIds || []);
-    setStatus("Dodge AI is awaiting instructions.");
+    setStatus(IDLE_STATUS);
   } catch (error) {
-    addMessage("assistant", String(error.message || error));
+    state.history.push({ role: "assistant", content: String(error.message || error) });
+    renderMessages();
+    syncActiveSession();
     setStatus(String(error.message || error), true);
+  } finally {
+    state.isSending = false;
+    updateComposerUi();
   }
+}
+
+export function initChatComposer() {
+  updateComposerUi();
 }
